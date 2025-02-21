@@ -1,20 +1,28 @@
+#![deny(unsafe_code)]
 #![no_std]
 #![no_main]
 
-// pick a panicking behavior
-use panic_halt as _; // you can put a breakpoint on `rust_begin_unwind` to catch panics
-// use panic_abort as _; // requires nightly
-// use panic_itm as _; // logs messages over ITM; requires ITM support
-// use panic_semihosting as _; // logs messages to the host stderr; requires a debugger
+use panic_halt as _;
 
-use cortex_m::asm;
+
+use stm32g0xx_hal as hal;
+use hal::prelude::*;
+use hal::rcc::Config;
+use hal::stm32;
+
 use cortex_m_rt::entry;
 
 #[entry]
 fn main() -> ! {
-    asm::nop(); // To not have main optimize to abort in release mode, remove when you add code
+    let dp = stm32::Peripherals::take().expect("cannot take peripherals");
+    let mut rcc = dp.RCC.freeze(Config::lsi());
+    let mut delay = dp.TIM16.delay(&mut rcc);
+
+    let gpioa = dp.GPIOA.split(&mut rcc);
+    let mut led = gpioa.pa4.into_push_pull_output();
 
     loop {
-        // your code goes here
+        led.toggle().unwrap();
+        delay.delay(500.ms());
     }
 }
